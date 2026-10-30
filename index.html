@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="vi" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinHoc10 Master - Luyện Bộ Đề, Đúng/Sai, Sửa Đáp Án & Lưu Điểm</title>
+  <meta name="description" content="Ứng dụng web luyện bộ đề trắc nghiệm và đúng sai Tin học 10 chương trình GDPT mới. Đầy đủ các bộ đề, hỗ trợ đăng ký tài khoản, đăng nhập lưu kết quả, chức năng sửa đáp án và xuất dữ liệu.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💻</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-slate-800 dark:text-slate-100 antialiased flex flex-col min-h-screen">
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Top Sticky Navigation Bar -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="app.switchTab('sets')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/30">
+          <i class="fa-solid fa-graduation-cap text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-brand-600 to-violet-600 dark:from-brand-400 dark:to-violet-400 bg-clip-text text-transparent">TinHoc10 Master</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300">Vercel App</span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Luyện Bộ Đề Đầy Đủ 100% • Tài Khoản & Sửa Đáp Án</p>
+        </div>
+      </div>
+
+      <!-- Quick Global Stats, Auth & Actions -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        
+        <!-- User Account Widget -->
+        <div id="user-header-widget" class="flex items-center">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Manage & Edit Answers Button -->
+        <button onclick="app.openManageAnswersModal()" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center space-x-1.5 transition border border-amber-300 dark:border-amber-700 shadow-sm" title="Quản lý & Chỉnh sửa đáp án">
+          <i class="fa-solid fa-pen-to-square text-xs text-amber-600 dark:text-amber-400"></i>
+          <span class="hidden sm:inline">Sửa đáp án</span>
+          <span id="header-edited-badge" class="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-amber-500 text-white font-extrabold hidden">0</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button id="btn-toggle-sound" onclick="app.toggleSound()" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition" title="Bật/Tắt âm thanh">
+          <i class="fa-solid fa-volume-high text-sm"></i>
+        </button>
+
+        <!-- Dark/Light Mode Toggle -->
+        <button id="btn-toggle-theme" onclick="app.toggleTheme()" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition" title="Đổi giao diện Sáng / Tối">
+          <i class="fa-solid fa-moon text-sm"></i>
+        </button>
+
+        <!-- Drawer Navigator Toggle -->
+        <button id="btn-toggle-matrix" onclick="app.toggleMatrixDrawer()" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center space-x-1.5 transition border border-slate-200 dark:border-slate-700">
+          <i class="fa-solid fa-table-cells-large text-xs"></i>
+          <span class="hidden md:inline">Mục lục</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Mode Selector Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-200/60 dark:border-slate-800/60">
+      <nav class="flex space-x-2 sm:space-x-4 overflow-x-auto py-2 scrollbar-none" aria-label="Tabs">
+        
+        <button onclick="app.switchTab('sets')" id="tab-btn-sets" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap bg-brand-600 text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>1. Các Bộ Đề Ôn Luyện</span>
+          <span class="px-1.5 py-0.2 text-[10px] rounded-full bg-white/20 text-white font-extrabold">Hot</span>
+        </button>
+
+        <button onclick="app.switchTab('practice')" id="tab-btn-practice" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition whitespace-nowrap">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>2. Luyện Tự Do (135 Câu)</span>
+        </button>
+
+        <button onclick="app.switchTab('history')" id="tab-btn-history" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition whitespace-nowrap">
+          <i class="fa-solid fa-chart-line text-emerald-500"></i>
+          <span>3. Bảng Điểm & Lịch Sử</span>
+          <span id="tab-history-badge" class="ml-1 px-1.5 py-0.2 text-[11px] rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-bold hidden">0</span>
+        </button>
+
+        <button onclick="app.switchTab('mistakes')" id="tab-btn-mistakes" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition whitespace-nowrap">
+          <i class="fa-solid fa-circle-exclamation text-rose-500"></i>
+          <span>4. Ôn Câu Sai</span>
+          <span id="tab-mistakes-badge" class="ml-1 px-1.5 py-0.2 text-[11px] rounded-full bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-300 font-bold hidden">0</span>
+        </button>
+
+        <button onclick="app.switchTab('study')" id="tab-btn-study" class="tab-button flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition whitespace-nowrap">
+          <i class="fa-solid fa-book-open"></i>
+          <span>5. Tra Cứu & Đáp Án</span>
+        </button>
+
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Dynamic View Containers -->
+    <div id="view-sets" class="view-panel block"></div>
+    <div id="view-practice" class="view-panel hidden"></div>
+    <div id="view-history" class="view-panel hidden"></div>
+    <div id="view-mistakes" class="view-panel hidden"></div>
+    <div id="view-study" class="view-panel hidden"></div>
+    <div id="view-active-set" class="view-panel hidden"></div>
+
+  </main>
+
+  <!-- Question Navigator Drawer Modal / Sidebar (Slide in from Right) -->
+  <div id="matrix-drawer" class="fixed inset-0 z-50 overflow-hidden hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="app.toggleMatrixDrawer()"></div>
+
+    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+      <div class="pointer-events-auto w-screen max-w-md glass-panel bg-white/95 dark:bg-slate-900/95 shadow-2xl p-6 flex flex-col h-full border-l border-slate-200 dark:border-slate-800">
+        
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-brand-600"></i> Mục Lục Câu Hỏi
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Nhấp vào số câu để chuyển đến nhanh</p>
+          </div>
+          <button onclick="app.toggleMatrixDrawer()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Legend -->
+        <div class="py-3 flex flex-wrap items-center gap-3 text-xs border-b border-slate-200 dark:border-slate-800 font-medium">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-emerald-500"></span> <span>Đúng</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-rose-500"></span> <span>Sai</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-brand-600"></span> <span>Đã chọn</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-slate-200 dark:bg-slate-700"></span> <span>Chưa làm</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-amber-400"></span> <span>Đã sửa ✏️</span>
+          </div>
+        </div>
+
+        <!-- Matrix Scrollable Area -->
+        <div class="flex-1 overflow-y-auto py-4 space-y-5" id="drawer-matrix-content">
+          <!-- Dynamically populated -->
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Confirm / Notification Modal -->
+  <div id="modal-container" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div id="modal-content" class="w-full max-w-lg glass-panel bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 transform transition-all">
+      <!-- Injected by script -->
+    </div>
+  </div>
+
+  <!-- Edit Answer Modal (Single Question Edit) -->
+  <div id="edit-answer-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+    <div class="w-full max-w-2xl glass-panel bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 relative max-h-[90vh] flex flex-col">
+      
+      <!-- Close button -->
+      <button onclick="app.closeEditAnswerModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </span>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white" id="edit-modal-title">Chỉnh Sửa Đáp Án</h3>
+            <p class="text-xs text-slate-500">Thay đổi đáp án đúng và lời giải thích sẽ được lưu tự động</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable Edit Content -->
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1" id="edit-modal-body">
+        <!-- Injected dynamically based on Part 1 or Part 2 -->
+      </div>
+
+      <!-- Action Buttons Footer -->
+      <div class="pt-4 border-t border-slate-200 dark:border-slate-800 mt-4 flex items-center justify-between">
+        <button onclick="app.resetQuestionToDefault()" class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate-left"></i> Khôi phục câu này về gốc
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="app.closeEditAnswerModal()" class="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Hủy
+          </button>
+          <button onclick="app.saveQuestionEdit()" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-500/25 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu Đáp Án Mới
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Manage Answers Modal (Overview & Export) -->
+  <div id="manage-answers-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+    <div class="w-full max-w-3xl glass-panel bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 sm:p-7 border border-slate-200 dark:border-slate-800 relative max-h-[90vh] flex flex-col">
+      
+      <button onclick="app.closeManageAnswersModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="pb-3 border-b border-slate-200 dark:border-slate-800 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-amber-600"></i> Quản Lý & Xuất Đáp Án Đã Sửa
+          </h3>
+          <p class="text-xs text-slate-500">Xem danh sách các câu đã chỉnh sửa hoặc tải về file questions.js mới để cập nhật vĩnh viễn</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="app.exportUpdatedQuestionsJS()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5" title="Tải về file questions.js mới để lưu vào code dự án">
+            <i class="fa-solid fa-download"></i> Tải questions.js mới
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Search inside Modal -->
+      <div class="mb-3">
+        <input type="text" id="manage-search-input" oninput="app.filterManageList(this.value)" placeholder="Tìm kiếm câu hỏi cần sửa đáp án (VD: Câu 1, Inkscape, IoT, CPU...)" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-amber-500 outline-none">
+      </div>
+
+      <!-- List of Edited / All Questions -->
+      <div class="flex-1 overflow-y-auto space-y-2.5 pr-1" id="manage-answers-list">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-200 dark:border-slate-800 mt-3 flex items-center justify-between text-xs text-slate-500">
+        <button onclick="app.resetAllCustomEdits()" class="text-rose-600 hover:text-rose-700 font-bold transition flex items-center gap-1">
+          <i class="fa-solid fa-trash-can"></i> Khôi phục toàn bộ 135 câu về đáp án gốc
+        </button>
+        <button onclick="app.closeManageAnswersModal()" class="px-4 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-100">
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Auth Modal (Login & Register) -->
+  <div id="auth-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm">
+    <div class="w-full max-w-md glass-panel bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 relative">
+      
+      <!-- Close button -->
+      <button onclick="app.closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <!-- Auth Tabs: Login vs Register -->
+      <div class="flex items-center border-b border-slate-200 dark:border-slate-800 pb-3 mb-5">
+        <button id="auth-tab-btn-login" onclick="app.switchAuthTab('login')" class="flex-1 pb-2 text-center text-sm font-bold border-b-2 border-brand-600 text-brand-600 dark:text-brand-400">
+          Đăng Nhập
+        </button>
+        <button id="auth-tab-btn-register" onclick="app.switchAuthTab('register')" class="flex-1 pb-2 text-center text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+          Đăng Ký Tài Khoản
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" onsubmit="app.handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tên đăng nhập</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <input type="text" id="login-username" required placeholder="Nhập tên đăng nhập hoặc email..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mật khẩu</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <input type="password" id="login-password" required placeholder="Nhập mật khẩu..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div id="login-error-msg" class="text-xs text-rose-500 font-semibold hidden"></div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition">
+          Đăng Nhập Ngay
+        </button>
+
+        <p class="text-xs text-center text-slate-500">Chưa có tài khoản? <a href="javascript:void(0)" onclick="app.switchAuthTab('register')" class="text-brand-600 font-bold underline">Đăng ký mới</a></p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" onsubmit="app.handleRegister(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Họ và tên học sinh</label>
+          <input type="text" id="reg-fullname" required placeholder="Ví dụ: Nguyễn Văn An" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tên đăng nhập</label>
+            <input type="text" id="reg-username" required placeholder="nguyenvanan" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Lớp học</label>
+            <input type="text" id="reg-classname" required placeholder="Ví dụ: 10A1" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mật khẩu</label>
+          <input type="password" id="reg-password" required placeholder="Tối thiểu 4 ký tự..." class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+        </div>
+
+        <div id="reg-error-msg" class="text-xs text-rose-500 font-semibold hidden"></div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-500/25 transition">
+          Tạo Tài Khoản & Lưu Điểm
+        </button>
+
+        <p class="text-xs text-center text-slate-500">Đã có tài khoản? <a href="javascript:void(0)" onclick="app.switchAuthTab('login')" class="text-brand-600 font-bold underline">Đăng nhập</a></p>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto py-6 border-t border-slate-200/70 dark:border-slate-800/70 bg-white/40 dark:bg-slate-900/40 text-center text-xs text-slate-500 dark:text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved text-brand-600"></i>
+        <span>Đề Cương Tin Học 10 - Hệ Thống Luyện Đề, Sửa Đáp Án & Lưu Điểm Cá Nhân (Vercel Ready)</span>
+      </div>
+      <div>
+        Phím tắt: <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px]">←</kbd> / <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px]">→</kbd> (Câu trước/sau), <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px]">1</kbd>-<kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px]">4</kbd> (A, B, C, D)
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

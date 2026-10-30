@@ -1,0 +1,14 @@
+{
+  "name": "de-cuong-tin-10-vercel-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ứng dụng luyện thi đề cương Tin học lớp 10 chương trình GDPT mới trên Vercel",
+  "keywords": [
+    "tinhoc10",
+    "decuong",
+    "quiz",
+    "vercel"
+  ],
+  "author": "Antigravity Pair Programmer",
+  "license": "MIT"
+}
