@@ -1,5 +1,6 @@
 /**
  * NGAN HANG CAU HOI DE CUONG TIN HOC 10 (UTF-8)
+ * Chương trình GDPT mới 2018 - Đã cập nhật đáp án chuẩn theo yêu cầu
  */
 
 window.QUIZ_BANK = {
@@ -310,8 +311,8 @@ window.QUIZ_BANK = {
         "C. Tiếp nhận thông tin, chuyển thành dữ liệu, tính toán dữ liệu, đưa ra kết quả.",
         "D. Cả ba đáp án đều sai."
       ],
-      "answer": "B",
-      "explanation": "3 bước cơ bản của xử lý thông tin: Tiếp nhận thông tin (thu nhận) -> Xử lí thông tin -> Đưa ra kết quả (xuất thông tin)."
+      "answer": "A",
+      "explanation": "Theo chương trình Tin học 10 GDPT mới: Quá trình xử lí thông tin gồm 3 bước cơ bản: Tiếp nhận dữ liệu, xử lí dữ liệu, đưa ra kết quả."
     },
     {
       "id": 23,
@@ -381,7 +382,7 @@ window.QUIZ_BANK = {
         "D. Byte."
       ],
       "answer": "A",
-      "explanation": "Đơn vị cơ sở để đo lượng thông tin là Bit. Byte là đơn vị thường dùng trong cấu trúc bộ nhớ (1 Byte = 8 Bit)."
+      "explanation": "Đơn vị đo lượng thông tin cơ bản / cơ sở trong máy tính là Bit."
     },
     {
       "id": 28,
@@ -394,8 +395,8 @@ window.QUIZ_BANK = {
         "C. Chuyển thông tin về bit nhị phân.",
         "D. Nhận dạng thông tin."
       ],
-      "answer": "C",
-      "explanation": "Mã hóa thông tin trong máy tính là chuyển đổi biểu diễn thông tin thành dãy các bit nhị phân 0 và 1."
+      "answer": "B",
+      "explanation": "Bản chất của quá trình mã hóa thông tin là đưa thông tin vào máy tính dưới dạng dữ liệu số mà máy tính xử lí được."
     },
     {
       "id": 29,
@@ -1276,8 +1277,8 @@ window.QUIZ_BANK = {
         "C. Là điều kiện cần.",
         "D. Là một cách."
       ],
-      "answer": "A",
-      "explanation": "Trong tin học, mua phần mềm thương mại thực chất chính là mua quyền sử dụng (License) phần mềm đó."
+      "answer": "B",
+      "explanation": "Trong tin học, mua phần mềm Khác mua quyền sử dụng (người mua thông thường chỉ mua giấy phép quyền sử dụng phần mềm, quyền tác giả và bản quyền sở hữu vẫn thuộc về nhà phát triển)."
     },
     {
       "id": 92,
@@ -1346,8 +1347,8 @@ window.QUIZ_BANK = {
         "C. Vi phạm đạo đức.",
         "D. Cả B và C đều đúng."
       ],
-      "answer": "D",
-      "explanation": "Hành vi phát tán thông tin đời tư bí mật mà không có sự đồng ý vi phạm cả chuẩn mực đạo đức lẫn Luật An ninh mạng."
+      "answer": "B",
+      "explanation": "Công bố thông tin cá nhân hay tổ chức mà không được phép là hành vi vi phạm pháp luật (xâm phạm quyền riêng tư cá nhân theo Luật An ninh mạng và Nghị định 15/2020/NĐ-CP)."
     },
     {
       "id": 97,
@@ -1672,7 +1673,7 @@ window.QUIZ_BANK = {
       "explanation": "Dùng công cụ Node Tool (F2) để kéo dời điểm neo hoặc tay đòn tiếp tuyến điều chỉnh hình dạng đường cong."
     },
     {
-      "id": 200,
+      "id": 120,
       "part": 1,
       "topic": "Thiết kế áp phích",
       "question": "Trước khi hoàn thiện áp phích, việc nào sau đây cần thực hiện?",
@@ -1686,7 +1687,7 @@ window.QUIZ_BANK = {
       "explanation": "Kiểm tra kỹ lưỡng các thành phần đồ họa để đảm bảo tính mỹ thuật và thông điệp truyền tải chính xác."
     },
     {
-      "id": 201,
+      "id": 121,
       "part": 1,
       "topic": "Định dạng đồ họa",
       "question": "Dạng tệp nào khác biệt với các tệp tin còn lại?",
@@ -1700,7 +1701,7 @@ window.QUIZ_BANK = {
       "explanation": "SVG là định dạng ảnh vector, còn bmp, jpg, png là định dạng ảnh điểm ảnh (bitmap)."
     },
     {
-      "id": 202,
+      "id": 122,
       "part": 1,
       "topic": "Đồ họa vectơ & Inkscape",
       "question": "Thanh công cụ nào được sử dụng nhiều nhất trong Inkscape?",
@@ -1714,7 +1715,7 @@ window.QUIZ_BANK = {
       "explanation": "Hộp công cụ (Toolbox) chứa các công cụ vẽ cơ bản được người dùng thao tác liên tục khi thiết kế."
     },
     {
-      "id": 203,
+      "id": 123,
       "part": 1,
       "topic": "So sánh Bitmap & Vector",
       "question": "Đâu không phải đặc điểm của đồ hoạ điểm ảnh?",
@@ -1728,7 +1729,7 @@ window.QUIZ_BANK = {
       "explanation": "Tạo logo và bản vẽ kỹ thuật là thế mạnh của đồ họa vector (không vỡ hình khi phóng to), không phải đồ họa điểm ảnh."
     },
     {
-      "id": 204,
+      "id": 124,
       "part": 1,
       "topic": "Đồ họa vectơ & Inkscape",
       "question": "Có thể tạo tệp mới trong Inkscape bằng cách nào?",
@@ -1742,7 +1743,7 @@ window.QUIZ_BANK = {
       "explanation": "Phím tắt chuẩn để tạo tài liệu thiết kế mới (New) là Ctrl + N."
     },
     {
-      "id": 205,
+      "id": 125,
       "part": 1,
       "topic": "Đồ họa vectơ & Inkscape",
       "question": "Đâu không phải thuộc tính cơ bản của đối tượng hình tròn, hình elip được Inkscape cung cấp?",
@@ -1752,11 +1753,11 @@ window.QUIZ_BANK = {
         "C. Bán kính theo phương thẳng đứng (Ry).",
         "D. Chiều sâu khối không gian 3 chiều."
       ],
-      "answer": "D",
-      "explanation": "Hình elip trong Inkscape là hình phẳng 2D, có thuộc tính Rx, Ry và góc Start/End để cắt cung tròn; không có chiều sâu 3D."
+      "answer": "A",
+      "explanation": "Thuộc tính cơ bản của hình elip/hình tròn trong Inkscape gồm bán kính Rx, Ry,... Đáp án A là không phải."
     },
     {
-      "id": 206,
+      "id": 126,
       "part": 1,
       "topic": "Đồ họa vectơ & Inkscape",
       "question": "Trong Inkscape, để tùy chỉnh màu tô và màu vẽ ta sử dụng hộp thoại nào?",
@@ -2196,7 +2197,7 @@ window.QUIZ_BANK = {
     {
       "id": "exam_4",
       "title": "Bộ Đề Số 4: Pháp Luật Số, An Toàn Mạng & Đồ Họa Vector",
-      "description": "Bao gồm 30 câu trắc nghiệm (Câu 97 - 119 và 200 - 206) và 3 câu Đúng/Sai (Câu 7 - 9)",
+      "description": "Bao gồm 30 câu trắc nghiệm (Câu 97 - 126) và 3 câu Đúng/Sai (Câu 7 - 9)",
       "part1Ids": [
         97,
         98,
@@ -2221,13 +2222,13 @@ window.QUIZ_BANK = {
         117,
         118,
         119,
-        200,
-        201,
-        202,
-        203,
-        204,
-        205,
-        206
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126
       ],
       "part2Ids": [
         7,

@@ -162,9 +162,9 @@ class QuizApp {
     this.examSets = this.bank.examSets || [];
     this.tfSets = this.bank.tfSets || [];
 
-    // Custom edits map: { globalId: { answer, explanation, items?: { [subId]: { isCorrect, explanation } } } }
-    this.customEdits = JSON.parse(localStorage.getItem('th10_custom_edits') || '{}');
-    this.applyCustomEdits();
+    // Ensure local storage custom edits are cleared so official questions.js answers are always used
+    localStorage.removeItem('th10_custom_edits');
+    this.customEdits = {};
 
     // Unified questions list
     this.allQuestions = [
@@ -214,7 +214,6 @@ class QuizApp {
     // Study filter
     this.studySearch = '';
     this.studyTopic = 'all';
-    this.manageSearch = '';
   }
 
   init() {
@@ -223,7 +222,6 @@ class QuizApp {
     this.updateSoundButtonUI();
     this.filterPracticeQuestions();
     this.renderUserHeaderWidget();
-    this.updateEditedBadge();
     this.render();
     this.updateHeaderStats();
     this.setupKeyboardShortcuts();
@@ -264,435 +262,10 @@ class QuizApp {
       : '<i class="fa-solid fa-volume-xmark text-slate-400 text-sm"></i>';
   }
 
-  // ==========================================
-  // CUSTOM ANSWER EDITING & EXPORT ENGINE
-  // ==========================================
-  applyCustomEdits() {
-    // Apply edits to part1List
-    this.part1List.forEach(q => {
-      const edit = this.customEdits[`p1_${q.id}`];
-      if (edit) {
-        if (edit.answer) q.answer = edit.answer;
-        if (edit.explanation) q.explanation = edit.explanation;
-        if (edit.question) q.question = edit.question;
-        q._isEdited = true;
-      }
-    });
-
-    // Apply edits to part2List
-    this.part2List.forEach(q => {
-      const edit = this.customEdits[`p2_${q.id}`];
-      if (edit) {
-        if (edit.scenario) q.scenario = edit.scenario;
-        if (edit.items) {
-          q.items.forEach(it => {
-            const itemEdit = edit.items[it.subId];
-            if (itemEdit) {
-              if (typeof itemEdit.isCorrect === 'boolean') it.isCorrect = itemEdit.isCorrect;
-              if (itemEdit.explanation) it.explanation = itemEdit.explanation;
-              if (itemEdit.text) it.text = itemEdit.text;
-            }
-          });
-        }
-        q._isEdited = true;
-      }
-    });
-  }
-
-  updateEditedBadge() {
-    const badge = document.getElementById('header-edited-badge');
-    if (!badge) return;
-    const count = Object.keys(this.customEdits).length;
-    if (count > 0) {
-      badge.textContent = count;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
-    }
-  }
-
-  openEditAnswerModal(globalId) {
-    this.editingGlobalId = globalId;
-    const q = this.allQuestions.find(item => item.globalId === globalId);
-    if (!q) return;
-
-    const modal = document.getElementById('edit-answer-modal');
-    const titleEl = document.getElementById('edit-modal-title');
-    const bodyEl = document.getElementById('edit-modal-body');
-    if (!modal || !bodyEl) return;
-
-    titleEl.textContent = q.globalType === 'part1'
-      ? `Sửa Đáp Án • Câu ${q.id} (Trắc nghiệm)`
-      : `Sửa Đáp Án • Câu Đúng/Sai ${q.id}`;
-
-    if (q.globalType === 'part1') {
-      this.editingPart1Answer = q.answer;
-      const optionsButtons = ['A', 'B', 'C', 'D'].map(letter => {
-        const isCurrent = letter === this.editingPart1Answer;
-        return `
-          <button type="button" onclick="app.setEditingPart1Answer('${letter}')" id="edit-opt-btn-${letter}" class="px-5 py-3 rounded-2xl border-2 font-black text-base transition flex items-center justify-center gap-2 ${isCurrent ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200'}">
-            <span>${letter}</span>
-            ${isCurrent ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-          </button>
-        `;
-      }).join('');
-
-      bodyEl.innerHTML = `
-        <div class="space-y-4">
-          <div class="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
-            <strong>Câu hỏi:</strong> ${q.question}
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Chọn đáp án đúng chuẩn:</label>
-            <div class="grid grid-cols-4 gap-2.5">
-              ${optionsButtons}
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Lời giải thích chi tiết:</label>
-            <textarea id="edit-explanation-input" rows="4" class="w-full p-3 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 outline-none">${q.explanation || ''}</textarea>
-          </div>
-        </div>
-      `;
-    } else {
-      // Part 2: True/False scenario
-      this.editingPart2Items = {};
-      q.items.forEach(it => {
-        this.editingPart2Items[it.subId] = {
-          isCorrect: it.isCorrect,
-          explanation: it.explanation || ''
-        };
-      });
-
-      const itemsHTML = q.items.map(it => {
-        const curVal = this.editingPart2Items[it.subId].isCorrect;
-        return `
-          <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-2.5">
-            <div class="flex items-start gap-2">
-              <span class="w-6 h-6 rounded-md bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">${it.subId})</span>
-              <p class="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 flex-1">${it.text}</p>
-            </div>
-
-            <div class="flex items-center space-x-2 pl-8">
-              <span class="text-xs font-bold text-slate-500">Đáp án:</span>
-              <button type="button" onclick="app.setEditingPart2Item('${it.subId}', true)" id="edit-tf-btn-${it.subId}-true" class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${curVal === true ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'}">
-                <i class="fa-solid fa-check text-xs"></i> ĐÚNG
-              </button>
-              <button type="button" onclick="app.setEditingPart2Item('${it.subId}', false)" id="edit-tf-btn-${it.subId}-false" class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${curVal === false ? 'bg-rose-600 text-white shadow-sm' : 'bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'}">
-                <i class="fa-solid fa-xmark text-xs"></i> SAI
-              </button>
-            </div>
-
-            <div class="pl-8">
-              <input type="text" id="edit-tf-exp-${it.subId}" value="${it.explanation || ''}" placeholder="Nhập giải thích cho ý ${it.subId}..." class="w-full px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-amber-500 outline-none">
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      bodyHTML = `
-        <div class="space-y-3.5">
-          <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
-            <strong>Tình huống:</strong> ${q.scenario}
-          </div>
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Chỉnh sửa tính Đúng / Sai cho từng ý:</label>
-            <div class="space-y-2.5">${itemsHTML}</div>
-          </div>
-        </div>
-      `;
-      bodyEl.innerHTML = bodyHTML;
-    }
-
-    modal.classList.remove('hidden');
-  }
-
-  setEditingPart1Answer(letter) {
-    this.editingPart1Answer = letter;
-    ['A', 'B', 'C', 'D'].forEach(l => {
-      const btn = document.getElementById(`edit-opt-btn-${l}`);
-      if (btn) {
-        if (l === letter) {
-          btn.className = 'px-5 py-3 rounded-2xl border-2 font-black text-base transition flex items-center justify-center gap-2 bg-emerald-600 border-emerald-600 text-white shadow-md';
-          btn.innerHTML = `<span>${l}</span> <i class="fa-solid fa-check text-xs"></i>`;
-        } else {
-          btn.className = 'px-5 py-3 rounded-2xl border-2 font-black text-base transition flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200';
-          btn.innerHTML = `<span>${l}</span>`;
-        }
-      }
-    });
-  }
-
-  setEditingPart2Item(subId, val) {
-    if (!this.editingPart2Items[subId]) return;
-    this.editingPart2Items[subId].isCorrect = val;
-
-    const btnTrue = document.getElementById(`edit-tf-btn-${subId}-true`);
-    const btnFalse = document.getElementById(`edit-tf-btn-${subId}-false`);
-
-    if (btnTrue && btnFalse) {
-      if (val === true) {
-        btnTrue.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-emerald-600 text-white shadow-sm';
-        btnFalse.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300';
-      } else {
-        btnFalse.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-rose-600 text-white shadow-sm';
-        btnTrue.className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300';
-      }
-    }
-  }
-
-  saveQuestionEdit() {
-    const globalId = this.editingGlobalId;
-    const q = this.allQuestions.find(item => item.globalId === globalId);
-    if (!q) return;
-
-    if (q.globalType === 'part1') {
-      const expInput = document.getElementById('edit-explanation-input');
-      const newAnswer = this.editingPart1Answer;
-      const newExp = expInput ? expInput.value.trim() : q.explanation;
-
-      q.answer = newAnswer;
-      q.explanation = newExp;
-      q._isEdited = true;
-
-      // Sync with part1List
-      const p1 = this.part1List.find(item => item.id === q.id);
-      if (p1) {
-        p1.answer = newAnswer;
-        p1.explanation = newExp;
-      }
-
-      this.customEdits[globalId] = {
-        answer: newAnswer,
-        explanation: newExp
-      };
-    } else {
-      // Part 2
-      const itemsMap = {};
-      q.items.forEach(it => {
-        const expEl = document.getElementById(`edit-tf-exp-${it.subId}`);
-        const isCorrect = this.editingPart2Items[it.subId].isCorrect;
-        const explanation = expEl ? expEl.value.trim() : it.explanation;
-        it.isCorrect = isCorrect;
-        it.explanation = explanation;
-        itemsMap[it.subId] = { isCorrect, explanation };
-      });
-      q._isEdited = true;
-
-      // Sync with part2List
-      const p2 = this.part2List.find(item => item.id === q.id);
-      if (p2) {
-        p2.items.forEach(it => {
-          if (itemsMap[it.subId]) {
-            it.isCorrect = itemsMap[it.subId].isCorrect;
-            it.explanation = itemsMap[it.subId].explanation;
-          }
-        });
-      }
-
-      this.customEdits[globalId] = { items: itemsMap };
-    }
-
-    localStorage.setItem('th10_custom_edits', JSON.stringify(this.customEdits));
-    this.closeEditAnswerModal();
-    this.updateEditedBadge();
-    this.sound.playCorrect();
-    this.showToast(`Đã lưu đáp án mới cho ${q.globalType === 'part1' ? `Câu ${q.id}` : `Câu Đúng/Sai ${q.id}`}!`, 'success');
-    this.render();
-  }
-
-  resetQuestionToDefault() {
-    const globalId = this.editingGlobalId;
-    if (!this.customEdits[globalId]) {
-      this.closeEditAnswerModal();
-      return;
-    }
-
-    delete this.customEdits[globalId];
-    localStorage.setItem('th10_custom_edits', JSON.stringify(this.customEdits));
-
-    // Reload from rawBank
-    if (globalId.startsWith('p1_')) {
-      const id = parseInt(globalId.replace('p1_', ''), 10);
-      const rawQ = this.rawBank.part1.find(x => x.id === id);
-      const q = this.allQuestions.find(x => x.globalId === globalId);
-      const p1 = this.part1List.find(x => x.id === id);
-      if (rawQ && q && p1) {
-        q.answer = rawQ.answer;
-        q.explanation = rawQ.explanation;
-        q._isEdited = false;
-        p1.answer = rawQ.answer;
-        p1.explanation = rawQ.explanation;
-      }
-    } else {
-      const id = parseInt(globalId.replace('p2_', ''), 10);
-      const rawQ = this.rawBank.part2.find(x => x.id === id);
-      const q = this.allQuestions.find(x => x.globalId === globalId);
-      const p2 = this.part2List.find(x => x.id === id);
-      if (rawQ && q && p2) {
-        q.items = JSON.parse(JSON.stringify(rawQ.items));
-        q._isEdited = false;
-        p2.items = JSON.parse(JSON.stringify(rawQ.items));
-      }
-    }
-
-    this.closeEditAnswerModal();
-    this.updateEditedBadge();
-    this.showToast('Đã khôi phục câu hỏi về đáp án ban đầu.', 'info');
-    this.render();
-  }
-
-  closeEditAnswerModal() {
-    const modal = document.getElementById('edit-answer-modal');
-    if (modal) modal.classList.add('hidden');
-    this.editingGlobalId = null;
-  }
-
-  // --- MANAGE ALL ANSWERS MODAL ---
-  openManageAnswersModal() {
-    const modal = document.getElementById('manage-answers-modal');
-    if (!modal) return;
-    this.manageSearch = '';
-    const input = document.getElementById('manage-search-input');
-    if (input) input.value = '';
-    this.renderManageAnswersList();
-    modal.classList.remove('hidden');
-  }
-
-  closeManageAnswersModal() {
-    const modal = document.getElementById('manage-answers-modal');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  filterManageList(val) {
-    this.manageSearch = val.toLowerCase().trim();
-    this.renderManageAnswersList();
-  }
-
-  renderManageAnswersList() {
-    const container = document.getElementById('manage-answers-list');
-    if (!container) return;
-
-    let list = [...this.allQuestions];
-    if (this.manageSearch) {
-      list = list.filter(q => {
-        if (q.globalType === 'part1') {
-          return `câu ${q.id}`.includes(this.manageSearch) ||
-            q.question.toLowerCase().includes(this.manageSearch) ||
-            q.topic.toLowerCase().includes(this.manageSearch);
-        } else {
-          return `câu ${q.id}`.includes(this.manageSearch) ||
-            `đúng sai ${q.id}`.includes(this.manageSearch) ||
-            q.scenario.toLowerCase().includes(this.manageSearch);
-        }
-      });
-    }
-
-    const editedCount = Object.keys(this.customEdits).length;
-
-    const itemsHTML = list.map(q => {
-      const isEdited = !!this.customEdits[q.globalId];
-      let answerPreview = '';
-      if (q.globalType === 'part1') {
-        answerPreview = `Đáp án: <strong class="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm ml-1">${q.answer}</strong>`;
-      } else {
-        const subPreview = q.items.map(it => `${it.subId}: <strong>${it.isCorrect ? 'Đ' : 'S'}</strong>`).join(', ');
-        answerPreview = `<span class="text-xs text-slate-600 dark:text-slate-300">Đáp án: ${subPreview}</span>`;
-      }
-
-      return `
-        <div class="p-3 rounded-2xl border transition flex items-center justify-between gap-3 ${isEdited ? 'border-amber-400 bg-amber-50/70 dark:bg-amber-950/40' : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/70'}">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${q.globalType === 'part1' ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}">
-                ${q.globalType === 'part1' ? `Câu ${q.id}` : `Đ/S ${q.id}`}
-              </span>
-              <span class="text-[11px] text-slate-500 truncate">${q.topic}</span>
-              ${isEdited ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
-            </div>
-            <p class="text-xs text-slate-800 dark:text-slate-200 truncate font-medium">
-              ${q.globalType === 'part1' ? q.question : q.scenario}
-            </p>
-            <div class="mt-1 text-xs">${answerPreview}</div>
-          </div>
-
-          <div class="shrink-0 flex items-center gap-1.5">
-            <button onclick="app.openEditAnswerModal('${q.globalId}')" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-1 shadow-sm">
-              <i class="fa-solid fa-pen text-[10px]"></i> Sửa
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    container.innerHTML = `
-      <div class="text-xs font-bold text-slate-500 mb-2 flex items-center justify-between">
-        <span>Hiển thị <strong>${list.length}</strong> câu hỏi • Đã tùy chỉnh: <strong class="text-amber-600">${editedCount}</strong> câu</span>
-      </div>
-      <div class="space-y-2">
-        ${itemsHTML}
-      </div>
-    `;
-  }
-
-  resetAllCustomEdits() {
-    if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ các đáp án đã chỉnh sửa và khôi phục về đề cương gốc không?')) return;
-    this.customEdits = {};
+  // Direct answer editing removed as requested - all answers are standardized from questions.js
+  clearLegacyEdits() {
     localStorage.removeItem('th10_custom_edits');
-    
-    // Restore in-memory bank from rawBank
-    this.bank = JSON.parse(JSON.stringify(this.rawBank));
-    this.part1List = this.bank.part1;
-    this.part2List = this.bank.part2;
-    this.allQuestions = [
-      ...this.part1List.map(q => ({ ...q, globalType: 'part1', globalId: `p1_${q.id}` })),
-      ...this.part2List.map(q => ({ ...q, globalType: 'part2', globalId: `p2_${q.id}` }))
-    ];
-
-    this.updateEditedBadge();
-    this.renderManageAnswersList();
-    this.render();
-    this.showToast('Đã khôi phục toàn bộ đáp án về mặc định.', 'info');
-  }
-
-  exportUpdatedQuestionsJS() {
-    // Generate clean JS with custom answers baked in
-    const exportBank = {
-      title: "Đề Cương Ôn Tập Tin Học 10 - Chương Trình Mới (Đã Cập Nhật Đáp Án)",
-      part1: this.part1List.map(q => {
-        const copy = { ...q };
-        delete copy._isEdited;
-        delete copy.globalType;
-        delete copy.globalId;
-        return copy;
-      }),
-      part2: this.part2List.map(q => {
-        const copy = { ...q };
-        delete copy._isEdited;
-        delete copy.globalType;
-        delete copy.globalId;
-        return copy;
-      }),
-      examSets: this.examSets,
-      tfSets: this.tfSets
-    };
-
-    const jsText = `/**\n * NGAN HANG CAU HOI DE CUONG TIN HOC 10 (UTF-8)\n * ĐÃ ĐƯỢC CHỈNH SỬA VÀ XUẤT TỰ ĐỘNG BỞI TINHOC10 MASTER\n */\n\nwindow.QUIZ_BANK = ${JSON.dumps ? JSON.dumps : JSON.stringify(exportBank, null, 2)};\n`;
-
-    // Trigger download
-    const blob = new Blob(["\ufeff", jsText], { type: 'application/javascript;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'questions.js';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    alert('✅ Đã tải về file "questions.js" mới thành công!\n\nBạn chỉ cần chép đè file questions.js này vào thư mục dự án và deploy lên Vercel là toàn bộ đáp án mới sẽ được cập nhật vĩnh viễn cho tất cả mọi người!');
+    this.customEdits = {};
   }
 
   // --- USER AUTHENTICATION & PROFILE ---
@@ -723,9 +296,6 @@ class QuizApp {
             </div>
             <a href="javascript:void(0)" onclick="app.switchTab('history')" class="block px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-chart-line text-brand-600"></i> Bảng điểm & Lịch sử
-            </a>
-            <a href="javascript:void(0)" onclick="app.openManageAnswersModal()" class="block px-4 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2">
-              <i class="fa-solid fa-pen-to-square"></i> Quản lý & Sửa đáp án
             </a>
             <a href="javascript:void(0)" onclick="app.openAuthModal('login')" class="block px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2">
               <i class="fa-solid fa-arrows-rotate text-blue-500"></i> Đổi tài khoản
@@ -932,7 +502,7 @@ class QuizApp {
       let bgClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700';
       const isBookmarked = this.bookmarks.has(q.globalId);
       const isFlagged = isRunningSet && this.activeSet.flags.has(idx);
-      const isEdited = !!this.customEdits[q.globalId];
+      const isEdited = false;
 
       if (isRunningSet) {
         if (!this.activeSet.submitted && this.activeSet.mode === 'submit_all') {
@@ -977,7 +547,7 @@ class QuizApp {
       const activeRing = (idx === currentIdx) ? 'ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-slate-900 scale-105' : '';
       let badgeTag = '';
       if (isFlagged) badgeTag = '🚩';
-      else if (isEdited) badgeTag = '✏️';
+      
       else if (isBookmarked) badgeTag = '★';
 
       const btnHTML = `
@@ -1063,7 +633,6 @@ class QuizApp {
         break;
     }
     this.updateHeaderStats();
-    this.updateEditedBadge();
   }
 
   // ==========================================
@@ -1183,7 +752,7 @@ class QuizApp {
             </span>
             <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Hệ Thống Luyện Bộ Đề Có Chấm Điểm & Lưu Kết Quả</h2>
             <p class="text-sm text-slate-300 mt-2 leading-relaxed">
-              Trọn bộ câu hỏi từ đề cương đã được phân loại thành <strong>4 Bộ đề chuẩn</strong> và <strong>4 Chuyên đề Đúng/Sai</strong>. Bạn có thể làm lại nhiều lần, tùy chọn <em>Xem kết quả sau từng câu</em> hoặc <em>Xem sau khi nộp đề</em>, và có thể <strong>tự chỉnh sửa đáp án</strong> bất kỳ câu nào!
+              Trọn bộ câu hỏi từ đề cương đã được phân loại thành <strong>4 Bộ đề chuẩn</strong> và <strong>4 Chuyên đề Đúng/Sai</strong>. Bạn có thể làm lại nhiều lần, tùy chọn <em>Xem kết quả sau từng câu</em> hoặc <em>Xem sau khi nộp đề</em>, và kết quả sẽ được tự động lưu vào tài khoản cá nhân của bạn!
             </p>
             <div class="mt-4 flex flex-wrap items-center gap-3">
               ${!this.currentUser ? `
@@ -1195,9 +764,7 @@ class QuizApp {
                   <i class="fa-solid fa-user-check text-emerald-400"></i> Đang đăng nhập: <strong>${this.currentUser.fullName}</strong> (${this.currentUser.className || 'Học sinh'})
                 </div>
               `}
-              <button onclick="app.openManageAnswersModal()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs shadow-lg transition flex items-center gap-2">
-                <i class="fa-solid fa-pen-to-square"></i> Quản lý & Sửa đáp án
-              </button>
+
             </div>
           </div>
         </div>
@@ -1439,11 +1006,9 @@ class QuizApp {
             <div class="flex items-center gap-2">
               <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300">Phần I • Câu ${this.activeSet.currentIndex + 1}</span>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${q.topic}</span>
-              ${this.customEdits[q.globalId] ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
+              
             </div>
-            <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1">
-              <i class="fa-solid fa-pen text-[10px]"></i> Sửa đáp án
-            </button>
+
           </div>
           <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">${q.question}</h2>
         </div>
@@ -1505,11 +1070,9 @@ class QuizApp {
             <div class="flex items-center gap-2">
               <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">Phần II • Câu Đúng/Sai ${this.activeSet.currentIndex + 1}</span>
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${q.topic}</span>
-              ${this.customEdits[q.globalId] ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
+              
             </div>
-            <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1">
-              <i class="fa-solid fa-pen text-[10px]"></i> Sửa đáp án
-            </button>
+
           </div>
           <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed">
             <i class="fa-solid fa-quote-left text-amber-500 mr-1.5"></i><strong>Tình huống:</strong> ${q.scenario}
@@ -2071,7 +1634,7 @@ class QuizApp {
     const q = this.filteredPracticeList[this.practiceIndex];
     const totalInFilter = this.filteredPracticeList.length;
     const isBookmarked = this.bookmarks.has(q.globalId);
-    const isEdited = !!this.customEdits[q.globalId];
+    const isEdited = false;
 
     const topics = [
       { id: 'all', name: 'Tất cả (135 câu)' },
@@ -2135,9 +1698,7 @@ class QuizApp {
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${q.topic}</span>
               ${isEdited ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
             </div>
-            <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2.5 py-1 rounded-xl border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-pen text-xs"></i> <span>Sửa đáp án</span>
-            </button>
+
           </div>
           <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
             ${q.question}
@@ -2217,9 +1778,7 @@ class QuizApp {
               <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${q.topic}</span>
               ${isEdited ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
             </div>
-            <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2.5 py-1 rounded-xl border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1.5 transition">
-              <i class="fa-solid fa-pen text-xs"></i> <span>Sửa đáp án</span>
-            </button>
+
           </div>
           <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed">
             <i class="fa-solid fa-quote-left text-amber-500 mr-1.5"></i><strong>Tình huống:</strong> ${q.scenario}
@@ -2381,9 +1940,7 @@ class QuizApp {
                 Phần I • Câu ${q.id}
               </span>
               <div class="flex items-center gap-2">
-                <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs text-amber-600 hover:underline">
-                  <i class="fa-solid fa-pen text-[10px]"></i> Sửa đáp án
-                </button>
+
                 <button onclick="app.removeMistake('${q.globalId}')" class="text-xs text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition">
                   <i class="fa-solid fa-check"></i> Đã nhớ câu này
                 </button>
@@ -2416,9 +1973,7 @@ class QuizApp {
                 Phần II (Đúng/Sai) • Câu ${q.id}
               </span>
               <div class="flex items-center gap-2">
-                <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs text-amber-600 hover:underline">
-                  <i class="fa-solid fa-pen text-[10px]"></i> Sửa đáp án
-                </button>
+
                 <button onclick="app.removeMistake('${q.globalId}')" class="text-xs text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition">
                   <i class="fa-solid fa-check"></i> Đã nhớ câu này
                 </button>
@@ -2493,7 +2048,7 @@ class QuizApp {
     }
 
     const cardsHTML = list.map(q => {
-      const isEdited = !!this.customEdits[q.globalId];
+      const isEdited = false;
 
       if (q.globalType === 'part1') {
         const optionsHTML = q.options.map((opt, oIdx) => {
@@ -2520,9 +2075,7 @@ class QuizApp {
               </div>
               <div class="flex items-center gap-3">
                 <span class="text-xs font-bold text-emerald-600">Đáp án: ${q.answer}</span>
-                <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2 py-1 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1">
-                  <i class="fa-solid fa-pen text-[10px]"></i> Sửa
-                </button>
+
               </div>
             </div>
             <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">${q.question}</h3>
@@ -2553,9 +2106,7 @@ class QuizApp {
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">Phần II (Đúng/Sai) • Câu ${q.id}</span>
                 ${isEdited ? `<span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">Đã sửa ✏️</span>` : ''}
               </div>
-              <button onclick="app.openEditAnswerModal('${q.globalId}')" class="text-xs font-semibold px-2 py-1 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 flex items-center gap-1">
-                <i class="fa-solid fa-pen text-[10px]"></i> Sửa
-              </button>
+
             </div>
             <div class="p-3 rounded-xl bg-amber-500/10 text-xs sm:text-sm text-slate-800 dark:text-slate-200">
               <strong>Tình huống:</strong> ${q.scenario}
@@ -2574,9 +2125,7 @@ class QuizApp {
             <input type="text" value="${this.studySearch}" oninput="app.onStudySearch(this.value)" placeholder="Tra cứu từ khóa nhanh (ví dụ: Inkscape, RAM, Byte, IoT, Bản quyền...)" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="app.openManageAnswersModal()" class="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 dark:bg-amber-950/60 dark:border-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 flex items-center gap-1.5 whitespace-nowrap">
-              <i class="fa-solid fa-pen-to-square"></i> Quản lý đáp án
-            </button>
+
             <button onclick="window.print()" class="no-print px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-100 flex items-center gap-1.5 whitespace-nowrap">
               <i class="fa-solid fa-print"></i> In / Xuất PDF
             </button>
